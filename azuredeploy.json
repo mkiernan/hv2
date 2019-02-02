@@ -70,7 +70,8 @@
 			"scriptsToDownload": [
 				"[concat(variables('scriptUrl'), 'cn-setup.sh')]",
 				"[concat(variables('scriptUrl'), 'hn-setup.sh')]",
-				"[concat(variables('scriptUrl'), 'pingpong.sh')]"
+				"[concat(variables('scriptUrl'), 'pingpong.sh')]",
+				"[concat(variables('scriptUrl'), 'qe_extension.sh')]"
 			],
 			"commandToExecute": ""
 		},
