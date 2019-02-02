@@ -9,6 +9,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 fi
 
 yum update -y
+yum --enablerepo=extras install -y -q epel-release
+yum install -y nfs-utils htop pdsh psmisc
 
 # update LIS
 wget https://aka.ms/lis
@@ -22,7 +24,7 @@ rm -rf lis; rm -rf LISISO
 #install mellanox driver
 yum install -y kernel-devel python-devel
 yum install -y kernel-devel-3.10.0-957.1.3.el7.x86_64
-yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++ htop gzip
+yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++
 yum install -y gtk2 atk cairo tcl tk createrepo
 wget http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
 tar zxvf MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
@@ -58,7 +60,10 @@ systemctl mask firewalld
 systemctl stop firewalld.service
 systemctl disable firewalld.service
 iptables -nL
-sed -i -e's/SELINUX=enforcing/SELINUX=disabled/g'/etc/selinux/config
+sed -i -e 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+
+#disable cpu power
+/bin/systemctl stop cpupower.service
 
 #setup user limits for MPI
 cat << EOF >> /etc/security/limits.conf
@@ -67,16 +72,3 @@ cat << EOF >> /etc/security/limits.conf
 *               hard    nofile          65535
 *               soft    nofile          65535
 EOF
-
-#setup ssh keys for mpi types that require it
-ssh-keygen -f /home/$USER/.ssh/id_rsa -t rsa -N ''
-cat << EOF > /home/$USER/.ssh/config
-Host *
-    StrictHostKeyChecking no
-EOF
-cat /home/$USER/.ssh/id_rsa.pub >> /home/$USER/.ssh/authorized_keys
-chmod 644 /home/$USER/.ssh/config
-
-#disable cpu power
-service cpupower stop
-sudo systemctl disable cpupower
