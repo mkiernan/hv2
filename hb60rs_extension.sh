@@ -10,7 +10,7 @@ fi
 
 yum update -y
 yum --enablerepo=extras install -y -q epel-release
-yum install -y nfs-utils htop pdsh psmisc
+yum install -y nfs-utils htop pdsh psmisc axel screen
 
 # update LIS
 wget https://aka.ms/lis

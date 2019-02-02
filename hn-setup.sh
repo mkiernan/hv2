@@ -1,29 +1,20 @@
 #!/bin/bash
 
-scriptUri=$1
-githubUser=$(echo "$scriptUri" | cut -d'/' -f4)
-githubRepo=$(echo "$scriptUri" | cut -d'/' -f5)
-githubBranch=$(echo "$scriptUri" | cut -d'/' -f6)
+set -x
+#set -xeuo pipefail #-- strict/exit on fail
+
+if [[ $(id -u) -ne 0 ]] ; then
+	echo "Must be run as root"
+	exit 1
+fi
 
 USER=hpcuser
 
 IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
 localip=`echo $IP | cut --delimiter='.' -f -3`
 
-cat << EOF >> /etc/security/limits.conf
-*               hard    memlock         unlimited
-*               soft    memlock         unlimited
-*               hard    nofile          65535
-*               soft    nofile          65535
-EOF
-
 mkdir -p /mnt/resource/scratch
 chmod a+rwx /mnt/resource/scratch
-
-yum --enablerepo=extras install -y -q epel-release
-yum install -y -q nfs-utils nmap htop pdsh screen git axel 
-# need to update for git work
-yum update -y nss curl libcurl
 
 cat << EOF >> /etc/exports
 /home 10.0.2.0/23(rw,sync,no_root_squash,no_all_squash)
@@ -96,9 +87,8 @@ EOF
 chown $USER:$USER /home/$USER/.screenrc
 
 cd /home/$USER
-echo $1 > debug.log
-echo "git clone -b $githubBranch https://github.com/$githubUser/$githubRepo.git" >> debug.log
-git clone -b $githubBranch https://github.com/$githubUser/$githubRepo.git
+git clone -b https://github.com/mkiernan/hv2.git
+mv hv2 azhpc
 chown $USER:$USER -R azhpc
 chmod +x azhpc/scripts/*
 cd /home/$USER/bin
