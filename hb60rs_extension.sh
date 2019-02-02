@@ -46,3 +46,37 @@ sed -i -e 's/AutoUpdate.Enabled=y/# AutoUpdate.Enabled=y/g' /etc/waagent.conf
 systemctl restart waagent
 popd
 rm -rf WALinuxAgent
+
+#automatically reclaim memory to avoid remote memory access 
+echo 1 >/proc/sys/vm/zone_reclaim_mode
+echo "vm.zone_reclaim_mode = 1" >> /etc/sysctl.conf sysctl -p
+
+#disable firewall & SELinux 
+systemctl stop iptables.service
+systemctl disable iptables.service
+systemctl mask firewalld
+systemctl stop firewalld.service
+systemctl disable firewalld.service
+iptables -nL
+sed -i -e's/SELINUX=enforcing/SELINUX=disabled/g'/etc/selinux/config
+
+#setup user limits for MPI
+cat << EOF >> /etc/security/limits.conf
+*               hard    memlock         unlimited
+*               soft    memlock         unlimited
+*               hard    nofile          65535
+*               soft    nofile          65535
+EOF
+
+#setup ssh keys for mpi types that require it
+ssh-keygen -f /home/$USER/.ssh/id_rsa -t rsa -N ''
+cat << EOF > /home/$USER/.ssh/config
+Host *
+    StrictHostKeyChecking no
+EOF
+cat /home/$USER/.ssh/id_rsa.pub >> /home/$USER/.ssh/authorized_keys
+chmod 644 /home/$USER/.ssh/config
+
+#disable cpu power
+service cpupower stop
+sudo systemctl disable cpupower
