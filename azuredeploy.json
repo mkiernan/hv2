@@ -57,6 +57,7 @@
 		"publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
 		"nicName": "[concat(variables('namingInfix'), 'nic')]",
 		"ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
+		"scriptUrl": "https://raw.githubusercontent.com/mkiernan/hv2/master/", 
 		"imageReference": {
 			"id": "[parameters('image')]"
 		},
