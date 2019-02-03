@@ -100,13 +100,6 @@ done
 
 rm -f install.py
 
-# install intel mpi
-yum -y install yum-utils
-yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
-rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-yum -y update
-yum -y install intel-mkl intel-mpi
-
 # install Quantum Espresso
 wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
 tar -xvzf q-e-qe-6.3.tar.gz

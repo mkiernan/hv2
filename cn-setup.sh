@@ -20,10 +20,3 @@ mount -a
 echo "hpcuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 # Disable tty requirement for sudo
 sed -i 's/^Defaults[ ]*requiretty/# Defaults requiretty/g' /etc/sudoers
-
-# install intel mpi
-yum -y install yum-utils
-yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
-rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-yum -y update
-yum -y install intel-mkl intel-mpi
