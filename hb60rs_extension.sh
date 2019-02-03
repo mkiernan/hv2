@@ -5,6 +5,9 @@
 # Includes the mellanox driver, intelmpi and all current advised best practises.
 # Suggest to run manualy on a console rather than as an extension - seems to 
 # hang when running as an extension due to the waagent reconfiguration. 
+# To run: 
+# wget https://raw.githubusercontent.com/mkiernan/hv2/master/hb60rs_extension.sh 
+# sudo ./hb60rs_extension.sh
 
 set -x
 #set -xeuo pipefail #-- strict/exit on fail
