@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# This script is intended not as a dynamic extension, but just to apply to
+# an HB60rs machine to create a static image. NB: It takes ~20 mins to run. 
+# Includes the mellanox driver, intelmpi and all current advised best practises.
+# Suggest to run manualy on a console rather than as an extension - seems to 
+# hang when running as an extension due to the waagent reconfiguration. 
+
 set -x
 #set -xeuo pipefail #-- strict/exit on fail
 
@@ -10,7 +16,7 @@ fi
 
 yum update -y
 yum --enablerepo=extras install -y -q epel-release
-yum install -y nfs-utils htop pdsh psmisc axel screen
+yum install -y nfs-utils htop pdsh psmisc axel screen nmap
 
 # update LIS
 wget https://aka.ms/lis
@@ -48,6 +54,13 @@ sed -i -e 's/AutoUpdate.Enabled=y/# AutoUpdate.Enabled=y/g' /etc/waagent.conf
 systemctl restart waagent
 popd
 rm -rf WALinuxAgent
+
+# install intel mpi - find this a bit too slow for an extension also, so bake it into the image.
+yum -y install yum-utils
+yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
+rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+yum -y update
+yum -y install intel-mkl intel-mpi
 
 #automatically reclaim memory to avoid remote memory access 
 echo 1 >/proc/sys/vm/zone_reclaim_mode
