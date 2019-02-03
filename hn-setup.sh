@@ -8,8 +8,6 @@ if [[ $(id -u) -ne 0 ]] ; then
 	exit 1
 fi
 
-yum install -y nmap
-
 USER=hpcuser
 
 IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
@@ -113,6 +111,4 @@ make all
 
 echo "source /opt/intel/mkl/bin/mklvars.sh intel64" >> /home/$USER/.bashrc
 echo "source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh" >> /home/$USER/.bashrc
-
-
-
+echo "export I_MPI_FABRICS=shm:ofa" >> /home/$USER/.bashrc
