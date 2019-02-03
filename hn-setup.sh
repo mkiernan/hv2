@@ -106,7 +106,7 @@ yum -y update
 #yum -y install intel-mkl intel-mpi
 #yum -y install intel-mkl-2018.4-274
 yum -y install intel-mkl-2018.4-057
-yum -y install intel-mpi-2018-4-057
+yum -y install intel-mpi-2018.4-057
 
 # install Quantum Espresso
 wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
