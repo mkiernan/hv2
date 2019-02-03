@@ -214,9 +214,7 @@
 						"typeHandlerVersion": "2.0",
 						"autoUpgradeMinorVersion": true,
 						"settings": {
-							"fileUris": [
-								"[uri(deployment().properties.templateLink.uri, 'hn-setup.sh')]"
-							],
+							"fileUris": "[variables('vmScripts').scriptsToDownload]",
 							"commandToExecute": "[concat('bash hn-setup.sh ', deployment().properties.templateLink.uri)]",
 							"timestamp": 12345
 						}
@@ -293,7 +291,7 @@
 									"typeHandlerVersion": "2.0",
 									"autoUpgradeMinorVersion": true,
 									"settings": {
-										"fileUris": "[variables('vmssScript').scriptToDownload]",
+										"fileUris": "[variables('vmScripts').scriptsToDownload]",
 										"commandToExecute": "[variables('vmssScript').commandToExecute]",
 										"timestamp": 12345
 									}

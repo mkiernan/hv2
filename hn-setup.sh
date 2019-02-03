@@ -8,6 +8,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 	exit 1
 fi
 
+yum install -y nmap
+
 USER=hpcuser
 
 IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
@@ -87,7 +89,7 @@ EOF
 chown $USER:$USER /home/$USER/.screenrc
 
 cd /home/$USER
-git clone -b https://github.com/mkiernan/hv2.git
+git clone https://github.com/mkiernan/hv2.git
 mv hv2 azhpc
 chown $USER:$USER -R azhpc
 chmod +x azhpc/scripts/*
@@ -97,3 +99,27 @@ for i in /home/$USER/azhpc/scripts/*; do
 done
 
 rm -f install.py
+
+# install intel mpi
+yum -y install yum-utils
+yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
+rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+yum -y update
+yum -y install intel-mkl intel-mpi
+
+# install Quantum Espresso
+wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
+tar -xvzf q-e-qe-6.3.tar.gz
+rm q-e-qe-6.3.tar.gz
+cd q-e-qe-6.3/
+export MANPATH=/opt/intel/impi/2018.4.274/linux/mpi/man
+source /opt/intel/mkl/bin/mklvars.sh intel64
+source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh
+./configure
+make all
+
+echo "source /opt/intel/mkl/bin/mklvars.sh intel64" >> /home/$USER/.bashrc
+echo "source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh" >> /home/$USER/.bashrc
+
+
+
