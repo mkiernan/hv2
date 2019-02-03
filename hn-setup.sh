@@ -98,6 +98,16 @@ done
 
 rm -f install.py
 
+# https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo
+#
+yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
+rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+yum -y update
+#yum -y install intel-mkl intel-mpi
+#yum -y install intel-mkl-2018.4-274
+yum -y install intel-mkl-2018.4-057
+yum -y install intel-mpi-2018-4-057
+
 # install Quantum Espresso
 wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
 tar -xvzf q-e-qe-6.3.tar.gz
