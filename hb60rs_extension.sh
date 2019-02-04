@@ -40,6 +40,7 @@ sed -i 's/LOAD_EIPOIB=no/LOAD_EIPOIB=yes/g' /etc/infiniband/openib.conf
 /etc/init.d/openibd restart
 rm -rf ./MLNX_*
 
+systemctl stop waagent.service
 yum update -y WALinuxAgent
 
 # install intel mpi 2018.4 - find this a bit too slow for an extension also, so bake it into the image.
