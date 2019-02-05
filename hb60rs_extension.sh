@@ -32,7 +32,7 @@ rm -rf lis; rm -rf LISISO
 #install mellanox driver
 yum install -y numactl
 yum install -y kernel-devel python-devel redhat-rpm-config rpm-build gcc-gfortran gcc-c++ gtk2 atk cairo tcl tk createrepo
-#yum install -y kernel-devel-3.10.0-957.1.3.el7.x86_64
+yum install -y kernel-devel-3.10.0-957.1.3.el7.x86_64
 wget http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
 tar zxvf MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
 ./MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64/mlnxofedinstall --add-kernel-support
