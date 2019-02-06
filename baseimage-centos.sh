@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fixed2
+# fixed3
 
 set -ex
 set -o pipefail
@@ -134,38 +134,6 @@ install_mlx_ofed_centos76()
     
     ./MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64/mlnxofedinstall \
         --kernel-sources /usr/src/kernels/$KERNEL \
-        --add-kernel-support \
-        --skip-repo
-        
-    sed -i 's/LOAD_EIPOIB=no/LOAD_EIPOIB=yes/g' /etc/infiniband/openib.conf
-    /etc/init.d/openibd restart
-    if [ $? != 0 ]; then
-        echo "ERROR: unable to restart openibd"
-        exit 1
-    fi
-}
-
-install_mlx_ofed_centos76()
-{
-    echo "*********************************************************"
-    echo "*                                                       *"
-    echo "*           Installing Mellanox OFED drivers            *" 
-    echo "*                                                       *"
-    echo "*********************************************************"
-
-    yum install -y kernel-devel python-devel
-
-    yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++
-    yum install -y gtk2 atk cairo tcl tk createrepo
-    
-    wget --retry-connrefused \
-        --tries=3 \
-        --waitretry=5 \
-        http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
-        
-    tar zxvf MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64.tgz
-    
-    ./MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.6-x86_64/mlnxofedinstall \
         --add-kernel-support \
         --skip-repo
         
