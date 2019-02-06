@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fixed
+# fixed2
 
 set -ex
 set -o pipefail
