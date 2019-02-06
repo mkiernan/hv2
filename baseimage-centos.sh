@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -ex
 set -o pipefail
 if [[ $(id -u) -ne 0 ]] ; then
