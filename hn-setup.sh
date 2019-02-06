@@ -13,6 +13,8 @@ USER=hpcuser
 IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
 localip=`echo $IP | cut --delimiter='.' -f -3`
 
+#ifconfig ib0 $(sed '/rdmaIPv4Address=/!d;s/.*rdmaIPv4Address="\([0-9.]*\)".*/\1/' /var/lib/waagent/SharedConfig.xml)/16
+
 mkdir -p /mnt/resource/scratch
 chmod a+rwx /mnt/resource/scratch
 
@@ -100,13 +102,13 @@ rm -f install.py
 
 # https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo
 #
-yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
-rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
-yum -y update
+#yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
+#rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+#yum -y update
 #yum -y install intel-mkl intel-mpi
 #yum -y install intel-mkl-2018.4-274
-yum -y install intel-mkl-2018.4-057
-yum -y install intel-mpi-2018.4-057
+#yum -y install intel-mkl-2018.4-057
+#yum -y install intel-mpi-2018.4-057
 
 # install Quantum Espresso
 wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
