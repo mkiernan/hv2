@@ -3,6 +3,8 @@
 # fail on any error
 set -e
 
+yum install -y htop nmap pdsh
+
 HEADNODE=10.0.2.4
 
 ifconfig ib0 $(sed '/rdmaIPv4Address=/!d;s/.*rdmaIPv4Address="\([0-9.]*\)".*/\1/' /var/lib/waagent/SharedConfig.xml)/16

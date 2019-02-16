@@ -8,6 +8,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 	exit 1
 fi
 
+yum install -y git nmap htop pdsh
+
 USER=hpcuser
 
 IP=`ifconfig eth0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'`
