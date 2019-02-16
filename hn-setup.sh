@@ -98,7 +98,7 @@ for i in /home/$USER/azhpc/scripts/*; do
 	ln -s $i
 done
 
-rm -f install.py
+#rm -f install.py
 
 # https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo
 #
@@ -111,15 +111,15 @@ rm -f install.py
 #yum -y install intel-mpi-2018.4-057
 
 # install Quantum Espresso
-wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
-tar -xvzf q-e-qe-6.3.tar.gz
-rm q-e-qe-6.3.tar.gz
-cd q-e-qe-6.3/
-export MANPATH=/opt/intel/impi/2018.4.274/linux/mpi/man
-source /opt/intel/mkl/bin/mklvars.sh intel64
-source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh
-./configure
-make all
+#wget https://gitlab.com/QEF/q-e/-/archive/qe-6.3/q-e-qe-6.3.tar.gz
+#tar -xvzf q-e-qe-6.3.tar.gz
+#rm q-e-qe-6.3.tar.gz
+#cd q-e-qe-6.3/
+#export MANPATH=/opt/intel/impi/2018.4.274/linux/mpi/man
+#source /opt/intel/mkl/bin/mklvars.sh intel64
+#source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh
+#./configure
+#make all
 
 echo "source /opt/intel/mkl/bin/mklvars.sh intel64" >> /home/$USER/.bashrc
 echo "source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh" >> /home/$USER/.bashrc
