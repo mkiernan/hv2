@@ -64,7 +64,7 @@ install_openmpi()
 } #-- end of install_openmpi() --#
 
 #-- Install Boost with OpenMPI
-install_boost_openmpi()
+install_boost_mpi()
 {
     yum install -y curl libcurl libcurl-devel
     yum install -y netcdf netcdf-devel gdal
@@ -78,9 +78,9 @@ install_boost_openmpi()
     ./bootstrap.sh --prefix=/usr/local
     # enable openmpi
     #echo "using mpi : /usr/lib64/openmpi/bin/mpiCC ;" >> project-config.jam
-    echo "using mpi : /usr/local/bin/mpiCC ;" >> project-config.jam
+#   echo "using mpi : /usr/local/bin/mpiCC ;" >> project-config.jam
+    echo "using mpi : /opt/intel/compilers_and_libraries_2018.5.274/linux/mpi/intel64/bin/mpicc ;" >> project-config.jam
     ./b2 -j"${NUM_CPUS}" install
-    #/sbin/ldconfig /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib
     popd
     #rm -rf ./boost_${BOOST_VERSION}
 
@@ -134,13 +134,9 @@ setup_build_tools
 # flip to gcc7 environment avoiding forkbomb
 # scl enable devtoolset-7 bash
 source /opt/rh/devtoolset-7/enable
-install_openmpi
-setup_repast_env # boost needs mpi in path
-install_boost_openmpi
+source /opt/intel/mkl/bin/mklvars.sh intel64
+source /opt/intel/impi/2018.4.274/intel64/bin/mpivars.sh
+#install_openmpi
+#setup_repast_env # boost needs mpi in path
+install_boost_mpi
 install_repast
-
-# run it
-# /home/mk/repast_hpc-2.3.0/MANUAL_INSTALL/OME/sfw/repast_hpc-2.2.0/bin
-# for bashrc
-#export PATH=$PATH:/usr/lib64/openmpi/bin/
-#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/openmpi/lib/:/usr/local/lib:/home/mk/repast_hpc-2.3.0/MANUAL_INSTALL/OME/sfw/repast_hpc-2.2.0/lib
