@@ -1,6 +1,23 @@
 #!/bin/bash
-set -e
-set -o pipefail
+################################################################################
+#
+# Build HPC Image with Environment Modules 
+#
+# OpenMPI, IntelMPI 2018.4, MPICH, MVAPICH
+#
+# Tested On: CentOS 7.6
+#
+################################################################################
+set -xeo pipefail #-- strict/exit on fail
+exec 2>&1 # funnel stderr back to packer client console
+
+if [[ $(id -u) -ne 0 ]] ; then
+        echo "Must be run as root"
+        exit 1
+fi
+
+NUM_CPUS=$( cat /proc/cpuinfo | awk '/^processor/{print $3}' | wc -l )
+INSTALL_PREFIX=/opt
 
 # temporarily stop yum service conflicts if applicable
 set +e
@@ -17,34 +34,37 @@ systemctl stop waagent.service
 # cleanup any aborted yum transactions
 yum-complete-transaction --cleanup-only
 
-# set limits for HPC apps
-cat << EOF >> /etc/security/limits.conf
+install_essentials() 
+{
+    # install essential packages
+    yum install -y epel-release
+    yum install -y nfs-utils jq htop axel git pdsh nmap
+    yum install -y numactl numactl-devel
+    yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++ byacc
+    yum install -y gtk2 atk cairo tcl tk createrepo
+    yum install -y xml2 libxml2 libxml2-devel zlib gmp mpfr
+    yum install -y python-setuptools
+
+} #-- install_essentials() --#
+
+configure_system()
+{
+     # set limits for HPC apps
+     cat << EOF >> /etc/security/limits.conf
 *               hard    memlock         unlimited
 *               soft    memlock         unlimited
 *               hard    nofile          65535
 *               soft    nofile          65535
 EOF
 
-# install based packages
-yum install -y epel-release
-if [ $? != 0 ]; then
-    echo "ERROR: unable to install epel-release"
-    exit 1
-fi
-yum install -y nfs-utils jq htop axel
-if [ $? != 0 ]; then
-    echo "ERROR: unable to install nfs-utils jq htop"
-    exit 1
-fi
+    # turn off GSS proxy
+    sed -i 's/GSS_USE_PROXY="yes"/GSS_USE_PROXY="no"/g' /etc/sysconfig/nfs
 
-# turn off GSS proxy
-sed -i 's/GSS_USE_PROXY="yes"/GSS_USE_PROXY="no"/g' /etc/sysconfig/nfs
+    # Disable tty requirement for sudo
+    sed -i 's/^Defaults[ ]*requiretty/# Defaults requiretty/g' /etc/sudoers
 
-# Disable tty requirement for sudo
-sed -i 's/^Defaults[ ]*requiretty/# Defaults requiretty/g' /etc/sudoers
-
-setenforce 0
-# Disable SELinux
+    setenforce 0
+    # Disable SELinux
 cat << EOF > /etc/selinux/config
 # This file controls the state of SELinux on the system.
 # SELINUX= can take one of these three values:
@@ -58,9 +78,11 @@ SELINUX=disabled
 SELINUXTYPE=targeted
 EOF
 
-# optimize
-systemctl disable cpupower
-systemctl disable firewalld
+    # optimize
+    systemctl disable cpupower
+    systemctl disable firewalld
+
+} #-- end of configure_system() --#
 
 install_beegfs_client()
 {
@@ -83,70 +105,107 @@ install_beegfs_client()
 	systemctl daemon-reload
 	systemctl enable beegfs-helperd.service
 	systemctl enable beegfs-client.service
-}
 
-setup_intel_mpi_2018()
+} #-- end of install_beegfs_client() --#
+
+install_intel_mpi_2018()
 {
     echo "*********************************************************"
     echo "*                                                       *"
     echo "*           Installing Intel MPI & Tools                *" 
     echo "*                                                       *"
     echo "*********************************************************"
-    VERSION=2018.4.274
-    IMPI_VERSION=l_mpi_${VERSION}
-    wget -q http://registrationcenter-download.intel.com/akdlm/irc_nas/tec/13651/${IMPI_VERSION}.tgz
+    IMPI_VERSION=2018.4-057  
+    IMPI_BUILD=2018.4.274
+    MKL_VERSION=2018.4-057
+    yum -y install yum-utils
+    yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+    yum -y install intel-mkl-${MKL_VERSION} intel-mpi-${IMPI_VERSION}
+    #source /opt/intel/mkl/bin/mklvars.sh intel64
+    #source /opt/intel/impi/${IMPI_BUILD}/intel64/bin/mpivars.sh
 
-    tar xvf ${IMPI_VERSION}.tgz
+} #-- end of install_intel_mpi_2018() --#
 
-    replace="s,ACCEPT_EULA=decline,ACCEPT_EULA=accept,g"
-    sed "$replace" ./${IMPI_VERSION}/silent.cfg > ./${IMPI_VERSION}/silent-accept.cfg
+install_ucx()
+{
+    echo "********************************* ************************"
+    echo "*                                                       *"
+    echo "*                 Installing UCX                        *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+    # UCX 1.5.0 RC1
+    wget https://github.com/openucx/ucx/releases/download/v1.5.0-rc1/ucx-1.5.0.tar.gz
+    tar -xvf ucx-1.5.0.tar.gz
+    cd ucx-1.5.0
+    ./contrib/configure-release --prefix=${INSTALL_PREFIX}/ucx-1.5.0 && make -j"${NUM_CPUS}" && make install
+    cd ..
 
-    ./${IMPI_VERSION}/install.sh -s ./${IMPI_VERSION}/silent-accept.cfg
+} #-- end of install_ucx() --#
 
-    source /opt/intel/impi/${VERSION}/bin64/mpivars.sh
-}
+install_hpcx()
+{
+    echo "********************************* ************************"
+    echo "*                                                       *"
+    echo "*                 Installing HPC-X                      *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+    # HPC-X v2.3.0
+    pushd ${INSTALL_PREFIX}
+    wget http://www.mellanox.com/downloads/hpc/hpc-x/v2.3/hpcx-v2.3.0-gcc-MLNX_OFED_LINUX-4.5-1.0.1.0-redhat7.6-x86_64.tbz
+    tar -xvf hpcx-v2.3.0-gcc-MLNX_OFED_LINUX-4.5-1.0.1.0-redhat7.6-x86_64.tbz
+    HPCX_PATH=${INSTALL_PREFIX}/hpcx-v2.3.0-gcc-MLNX_OFED_LINUX-4.5-1.0.1.0-redhat7.6-x86_64
+    HCOLL_PATH=${HPCX_PATH}/hcoll
+    rm -rf hpcx-v2.3.0-gcc-MLNX_OFED_LINUX-4.5-1.0.1.0-redhat7.6-x86_64.tbz
+    popd
+ 
+} #-- end of install_hpcx() --#
 
-install_mlx_ofed_centos75()
+install_openmpi()
 {
     echo "*********************************************************"
     echo "*                                                       *"
-    echo "*           Installing Mellanox OFED drivers            *" 
+    echo "*             Installing OpenMPI 4.0.0                  *" 
     echo "*                                                       *"
     echo "*********************************************************"
+    # OpenMPI 4.0.0
+    wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.0.tar.gz
+    tar -xvf openmpi-4.0.0.tar.gz
+    cd openmpi-4.0.0
+    ./configure --prefix=${INSTALL_PREFIX}/openmpi-4.0.0 --with-ucx=${INSTALL_PREFIX}/ucx-1.5.0 --enable-mpirun-prefix-by-default && make -j"${NUM_CPUS}" && make install
+    cd ..
 
-    KERNEL=$(uname -r)
-    echo $KERNEL
-    yum install -y kernel-devel-${KERNEL}
-    
-    if [ $? -eq 1 ]; then
-        KERNEL=3.10.0-862.el7.x86_64
-        echo "added RPM for $KERNEL"
-        rpm -i http://vault.centos.org/7.5.1804/os/x86_64/Packages/kernel-devel-${KERNEL}.rpm
-    fi
-    
-    yum install -y python-devel
-    yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++
-    yum install -y gtk2 atk cairo tcl tk createrepo
-    
-    wget --retry-connrefused \
-        --tries=3 \
-        --waitretry=5 \
-        http://content.mellanox.com/ofed/MLNX_OFED-4.5-1.0.1.0/MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.5-x86_64.tgz
-        
-    tar zxvf MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.5-x86_64.tgz
-    
-    ./MLNX_OFED_LINUX-4.5-1.0.1.0-rhel7.5-x86_64/mlnxofedinstall \
-        --kernel-sources /usr/src/kernels/$KERNEL \
-        --add-kernel-support \
-        --skip-repo
-        
-    sed -i 's/LOAD_EIPOIB=no/LOAD_EIPOIB=yes/g' /etc/infiniband/openib.conf
-    /etc/init.d/openibd restart
-    if [ $? != 0 ]; then
-        echo "ERROR: unable to restart openibd"
-        exit 1
-    fi
-}
+} #-- end of install_openmpi() --#
+
+install_mvapich()
+{
+    echo "*********************************************************"
+    echo "*                                                       *"
+    echo "*               Installing MVAPICH 2.3                  *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+    wget http://mvapich.cse.ohio-state.edu/download/mvapich/mv2/mvapich2-2.3.tar.gz
+    tar -xvf mvapich2-2.3.tar.gz
+    cd mvapich2-2.3
+    ./configure --prefix=${INSTALL_PREFIX}/mvapich2-2.3 --enable-g=none --enable-fast=yes && make -j"${NUM_CPUS}" && make install
+    cd ..
+
+} #-- end of mvapich() --#
+
+install_mpich()
+{
+    echo "*********************************************************"
+    echo "*                                                       *"
+    echo "*                Installing MPICH 3.3                   *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+    wget http://www.mpich.org/static/downloads/3.3/mpich-3.3.tar.gz
+    tar -xvf mpich-3.3.tar.gz
+    cd mpich-3.3
+    ./configure --prefix=${INSTALL_PREFIX}/mpich-3.3 --with-ucx=${INSTALL_PREFIX}/ucx-1.5.0 --with-hcoll=${HCOLL_PATH} --enable-g=none --enable-fast=yes --with-device=ch4:ucx   && make -j"${NUM_CPUS}" && make install 
+    cd ..
+
+} #-- end of mpich() --#
 
 install_mlx_ofed_centos76()
 {
@@ -155,13 +214,8 @@ install_mlx_ofed_centos76()
     echo "*           Installing Mellanox OFED drivers            *" 
     echo "*                                                       *"
     echo "*********************************************************"
-
     KERNEL=$(uname -r)
-    echo $KERNEL
     yum install -y kernel-devel-${KERNEL} python-devel
-
-    yum install -y redhat-rpm-config rpm-build gcc-gfortran gcc-c++
-    yum install -y gtk2 atk cairo tcl tk createrepo
     
     wget --retry-connrefused \
         --tries=3 \
@@ -174,22 +228,74 @@ install_mlx_ofed_centos76()
         --add-kernel-support \
         --skip-repo
 
-}
+} #-- install_mlx_ofed_centos76() --#
 
-upgrade_lis()
+install_lis()
 {
-    cd /mnt/resource
+    echo "*********************************************************"
+    echo "*                                                       *"
+    echo "* Installing Microsoft Linux Integration Services (LIS) *"
+    echo "*                                                       *"
+    echo "*********************************************************"
+    pushd /mnt/resource
     set +e
     wget --retry-connrefused --read-timeout=10 https://aka.ms/lis
     tar xvzf lis
-    pushd LISISO
-    ./upgrade.sh
+    cd LISISO
+    #./upgrade.sh # BUG
+    ./install.sh
     popd
     set -e
-}
 
-# update WALA
-yum update -y WALinuxAgent
+} #-- end of install_lis() --#
+
+install_gcc731()
+{
+    echo "*********************************************************"
+    echo "*                                                       *"
+    echo "*               Installing GCC 7.3.1                    *" 
+    echo "*                                                       *"
+    echo "*********************************************************"
+    yum install centos-release-scl-rh -y
+    yum --enablerepo=centos-sclo-rh-testing install devtoolset-7-gcc -y
+    yum --enablerepo=centos-sclo-rh-testing install devtoolset-7-gcc-c++ -y
+    yum --enablerepo=centos-sclo-rh-testing install devtoolset-7-gcc-gfortran -y
+
+} #-- install_gcc731() --#
+
+install_modules()
+{
+    yum install -y environment-modules
+    git clone https://github.com/mkiernan/azhpcmodules.git
+    cd azhpcmodules
+    cp -R ./mpi /usr/share/Modules/modulefiles/
+    cp ./compiler/gcc-7.3.1 /usr/share/Modules/modulefiles/
+    pushd /usr/share/Modules/modulefiles/
+    rm -rf module-info module-git dot null use.own modules
+    popd
+
+} #-- end of install_modules() --#
+
+install_WALA()
+{
+    # Install WALinuxAgent
+    mkdir -p /tmp/wala
+    cd /tmp/wala
+    wget https://github.com/Azure/WALinuxAgent/archive/v2.2.36.tar.gz
+    tar -xvf v2.2.36.tar.gz
+    cd WALinuxAgent-2.2.36
+    python setup.py install --register-service --force
+    sed -i -e 's/# OS.EnableRDMA=y/OS.EnableRDMA=y/g' /etc/waagent.conf
+    sed -i -e 's/AutoUpdate.Enabled=y/# AutoUpdate.Enabled=y/g' /etc/waagent.conf
+    systemctl restart waagent
+    cd && rm -rf /tmp/wala
+
+} #-- end of install_WALA() --#
+
+#yum update -y WALinuxAgent
+
+install_essentials
+configure_system
 
 # check if running on HB/HC
 VMSIZE=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-12-01" | jq -r '.compute.vmSize')
@@ -198,16 +304,22 @@ echo "vmSize is $VMSIZE"
 if [ "$VMSIZE" == "standard_hb60rs" ] || [ "$VMSIZE" == "standard_hc44rs" ]
 then
     set +e
-    yum install -y numactl
     install_mlx_ofed_centos76
-    upgrade_lis
-
+    install_lis
     echo 1 >/proc/sys/vm/zone_reclaim_mode
     echo "vm.zone_reclaim_mode = 1" >> /etc/sysctl.conf
     sysctl -p
-    
     set -e
 fi
+install_WALA
+install_intel_mpi_2018
+install_ucx
+install_hpcx
+install_openmpi
+install_mpich
+install_mvapich
+install_gcc731
+install_modules
 
 ifconfig
 
